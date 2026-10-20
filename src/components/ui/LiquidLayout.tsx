@@ -41,8 +41,11 @@ interface LiquidAppLayoutProps {
 export const LiquidAppLayout: React.FC<LiquidAppLayoutProps> = ({ children, onFileDrop, accept = 'application/pdf' }) => {
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
+  const isInternalDrag = (e: React.DragEvent | DragEvent) =>
+    Array.from(e.dataTransfer?.types ?? []).includes('application/x-pdf-merge-card');
 
   const handleDragEnter = (e: React.DragEvent | DragEvent) => {
+    if (isInternalDrag(e)) return;
     e.preventDefault();
     e.stopPropagation();
     dragCounter.current++;
@@ -52,6 +55,7 @@ export const LiquidAppLayout: React.FC<LiquidAppLayoutProps> = ({ children, onFi
   };
 
   const handleDragLeave = (e: React.DragEvent | DragEvent) => {
+    if (isInternalDrag(e)) return;
     e.preventDefault();
     e.stopPropagation();
     dragCounter.current--;
@@ -61,11 +65,17 @@ export const LiquidAppLayout: React.FC<LiquidAppLayoutProps> = ({ children, onFi
   };
 
   const handleDragOver = (e: React.DragEvent | DragEvent) => {
+    if (isInternalDrag(e)) return;
     e.preventDefault();
     e.stopPropagation();
   };
 
   const handleDrop = (e: React.DragEvent | DragEvent) => {
+    if (isInternalDrag(e)) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
