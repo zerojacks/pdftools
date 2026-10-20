@@ -1,26 +1,195 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@variant dark (&:where(.dark, .dark *));
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+@theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  --primary: #007AFF;
+  
+  /* Light Mode Defaults */
+  --text: #000;
+  --text-sec: #555;
+  --glass-tint: rgba(255, 255, 255, 0.25);
+  --glass-shine-highlight: rgba(255, 255, 255, 0.5);
+  --glass-shine-shadow: rgba(255, 255, 255, 0.5);
+  --glass-shadow: 0 6px 6px rgba(0, 0, 0, 0.2), 0 0 20px rgba(0, 0, 0, 0.1);
+  
+  --input-bg: rgba(255, 255, 255, 0.25);
+  --input-border: rgba(255, 255, 255, 0.3);
+  --input-focus-bg: rgba(255, 255, 255, 0.5);
+  
+  --control-group-bg: rgba(255, 255, 255, 0.2);
+  --control-group-border: rgba(255, 255, 255, 0.1);
+  
+  --drag-overlay-bg: rgba(255, 255, 255, 0.1);
+  --drag-overlay-border: rgba(255, 255, 255, 0.4);
+  --drag-content-bg: rgba(255, 255, 255, 0.3);
+  
+  --card-bg: rgba(255, 255, 255, 0.8);
+  --option-hover: rgba(255, 255, 255, 0.4);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.8);
+  --scrollbar-thumb-hover: #ffffff;
+  --scrollbar-border: rgba(0, 0, 0, 0.1);
+  --scrollbar-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  
+  --label-color: #333;
+  --subtitle-color: #555;
+  --icon-color: #333;
+}
+
+:root.dark {
+  --text: #f1f5f9; /* slate-100 */
+  --text-sec: #94a3b8; /* slate-400 */
+  
+  --glass-tint: rgba(0, 0, 0, 0.4);
+  --glass-shine-highlight: rgba(255, 255, 255, 0.1);
+  --glass-shine-shadow: rgba(255, 255, 255, 0.05);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  
+  --input-bg: rgba(0, 0, 0, 0.3);
+  --input-border: rgba(255, 255, 255, 0.1);
+  --input-focus-bg: rgba(0, 0, 0, 0.5);
+  
+  --control-group-bg: rgba(0, 0, 0, 0.3);
+  --control-group-border: rgba(255, 255, 255, 0.05);
+  
+  --drag-overlay-bg: rgba(0, 0, 0, 0.4);
+  --drag-overlay-border: rgba(255, 255, 255, 0.2);
+  --drag-content-bg: rgba(30, 41, 59, 0.6);
+  
+  --card-bg: rgba(15, 23, 42, 0.8); /* slate-900 with opacity */
+  --option-hover: rgba(255, 255, 255, 0.1);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.2);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
+  --scrollbar-border: rgba(255, 255, 255, 0.1);
+  --scrollbar-shadow: none;
+  
+  --label-color: #cbd5e1; /* slate-300 */
+  --subtitle-color: #94a3b8;
+  --icon-color: #e2e8f0;
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply backdrop-blur-2xl bg-white/40 dark:bg-black/40 border border-white/50 dark:border-white/10 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.3)];
+  }
+  
+  .glass-button {
+    @apply backdrop-blur-lg bg-white/30 dark:bg-white/5 border border-white/40 dark:border-white/10 shadow-sm hover:bg-white/50 dark:hover:bg-white/10 transition-all duration-300 active:scale-95;
+  }
+
+  /* Liquid Glass Utilities */
+  .liquid-glass-wrapper {
+    @apply relative flex font-semibold text-[var(--text)] shadow-[var(--glass-shadow)] transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,2.2)] rounded-[1.8rem];
+  }
+
+  .liquid-glass-effect {
+    @apply absolute z-0 inset-0 backdrop-blur-[10px] overflow-hidden isolate rounded-[1.8rem];
+  }
+
+  .liquid-glass-tint {
+    @apply z-[1] absolute inset-0 bg-[var(--glass-tint)] rounded-[1.8rem];
+  }
+
+  .liquid-glass-shine {
+    @apply absolute inset-0 z-[2] overflow-hidden rounded-[1.8rem];
+    box-shadow: inset 1px 1px 0 0 var(--glass-shine-highlight),
+      inset -1px -1px 0 0 var(--glass-shine-shadow);
+  }
+
+  .liquid-glass-text {
+    @apply z-[3] relative text-[var(--text)] w-full h-full;
+  }
+  
+  /* Common Input Styles */
+  .liquid-input {
+    @apply w-full h-9 rounded-[10px] border border-[var(--input-border)] bg-[var(--input-bg)] px-3 text-sm outline-none text-[var(--text)] backdrop-blur-[4px] transition-all duration-200;
+  }
+  
+  .liquid-input:focus {
+    @apply bg-[var(--input-focus-bg)] border-[var(--primary)] shadow-[0_0_0_2px_rgba(0,122,255,0.2)];
+  }
+  
+  .liquid-label {
+    @apply text-xs font-bold text-[var(--label-color)] uppercase mb-1;
+  }
+  
+  .liquid-card {
+    @apply flex flex-col gap-2.5 p-3 bg-[var(--control-group-bg)] rounded-2xl mb-2.5 shadow-[0_4px_6px_rgba(0,0,0,0.05)] border border-[var(--control-group-border)];
+  }
+  
+  .liquid-btn {
+    @apply bg-[var(--primary)] text-white border-none px-6 py-3 rounded-xl text-[15px] font-semibold cursor-pointer transition-all duration-200 inline-flex items-center justify-center shadow-[0_4px_12px_rgba(0,122,255,0.3)];
+  }
+  
+  .liquid-btn:hover {
+    @apply scale-[1.02] shadow-[0_6px_16px_rgba(0,122,255,0.4)];
+  }
+  
+  .liquid-btn:disabled {
+    @apply bg-black/20 cursor-not-allowed transform-none shadow-none text-white/50;
+  }
+
+  /* Global Scrollbar Styling */
+  .glass-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .glass-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .glass-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 4px;
+    border: 1px solid var(--scrollbar-border);
+    box-shadow: var(--scrollbar-shadow);
+  }
+
+  .glass-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+
+  .glass-scrollbar::-webkit-scrollbar-corner {
+    background: transparent;
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  @apply antialiased bg-gray-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100;
+  min-height: 100vh;
+}
+
+/* Apply scrollbar globally but can be overridden or scoped if needed */
+* {
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+  border: 1px solid var(--scrollbar-border);
+  box-shadow: var(--scrollbar-shadow);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
