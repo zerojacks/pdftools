@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="glass" x1="72" y1="52" x2="442" y2="468" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#66D9FF"/>
+      <stop offset=".48" stop-color="#4388FF"/>
+      <stop offset="1" stop-color="#815BFF"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="156" y1="63" x2="355" y2="343" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff" stop-opacity=".94"/>
+      <stop offset="1" stop-color="#EAF5FF" stop-opacity=".76"/>
+    </linearGradient>
+    <linearGradient id="ribbon" x1="147" y1="294" x2="368" y2="378" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#79F3E0"/>
+      <stop offset="1" stop-color="#B9FFFA"/>
+    </linearGradient>
+    <filter id="shadow" x="35" y="30" width="442" height="461" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="12"/>
+      <feOffset dy="12"/>
+      <feComponentTransfer><feFuncA type="linear" slope=".2"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect x="28" y="28" width="456" height="456" rx="132" fill="url(#glass)"/>
+  <rect x="29.5" y="29.5" width="453" height="453" rx="130.5" stroke="#fff" stroke-opacity=".4" stroke-width="3"/>
+  <g filter="url(#shadow)">
+    <path d="M157 91h132l76 76v220c0 17.1-13.9 31-31 31H157c-17.1 0-31-13.9-31-31V122c0-17.1 13.9-31 31-31Z" fill="url(#shine)"/>
+    <path d="M289 91v54c0 12.2 9.8 22 22 22h54l-76-76Z" fill="#C8E5FF"/>
+    <path d="M180 211h119M180 246h151" stroke="#6F8BB8" stroke-opacity=".34" stroke-width="15" stroke-linecap="round"/>
+    <path d="M164 328c35-39 68-45 98-19 29 25 58 20 87-13" stroke="#4769C5" stroke-opacity=".16" stroke-width="37" stroke-linecap="round"/>
+    <path d="M164 310c35-39 68-45 98-19 29 25 58 20 87-13" stroke="url(#ribbon)" stroke-width="25" stroke-linecap="round"/>
+    <path d="m330 278 28-4-2 29" stroke="#B9FFFA" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M180 365c25 0 38-18 56-18" stroke="#fff" stroke-opacity=".72" stroke-width="10" stroke-linecap="round"/>
+  </g>
+  <circle cx="385" cy="126" r="11" fill="#D6FFFA" fill-opacity=".88"/>
+  <circle cx="111" cy="379" r="7" fill="#fff" fill-opacity=".65"/>
+</svg>

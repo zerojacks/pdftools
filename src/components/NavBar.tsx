@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Home, Split, Image as ImageIcon, LayoutGrid, Merge, Stamp, Eraser, Bookmark } from "lucide-react";
+import { Home, Split, Image as ImageIcon, LayoutGrid, Merge, Stamp, Bookmark } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 
 export default function NavBar() {
@@ -15,7 +15,6 @@ export default function NavBar() {
     { name: "Merge", href: "/merge", icon: Merge },
     { name: "Extract", href: "/extract", icon: ImageIcon },
     { name: "Watermark", href: "/watermark", icon: Stamp },
-    { name: "Remove", href: "/remove-watermark", icon: Eraser },
     { name: "Bookmarks", href: "/bookmarks", icon: Bookmark },
     { name: "Imposition", href: "/imposition", icon: LayoutGrid },
   ];

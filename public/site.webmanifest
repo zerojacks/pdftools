@@ -1,0 +1,17 @@
+{
+  "name": "Liquid PDF Tools",
+  "short_name": "Liquid PDF",
+  "description": "Privacy-focused PDF tools that run in your browser.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#4388ff",
+  "icons": [
+    {
+      "src": "/liquid-pdf-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
