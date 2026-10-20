@@ -17,6 +17,7 @@ const CheckIcon = () => (
 type PageNoPos = 'bottom-center' | 'bottom-right' | 'top-center' | 'top-right'
 type PageNoFormat = 'plain' | 'slash' | 'dash'
 type PageNoFontFamily = 'helvetica' | 'times' | 'courier'
+type PageOrderEntry = number | null
 
 interface PageNoConfig {
   enabled: boolean
@@ -108,6 +109,7 @@ const PreviewSheet = React.memo(({
   dragFromOrder,
   dragOverOrder,
   onPageDelete,
+  onPageAddBlank,
   onPageMove,
   onPageDragStart,
   onPageDragOver,
@@ -118,15 +120,16 @@ const PreviewSheet = React.memo(({
   exportIndex: number,   // 在导出序列中的序号（0-based）
   exportTotal: number,   // 导出总张数
   nup: number,
-  pageThumbnails: HTMLCanvasElement[],
+  pageThumbnails: (HTMLCanvasElement | null)[],
   layout: { pageSize: { w: number, h: number }, cells: CellLayout[] },
   params: LayoutParams,
   previewZoom: number,
   pageNo: PageNoConfig,
-  pageLabels: number[],       // 排版顺序 → 原文件页码（1-based）
+  pageLabels: (number | null)[], // 排版顺序 → 原文件页码（1-based），null 表示空白页
   dragFromOrder: number | null,
   dragOverOrder: number | null,
   onPageDelete: (orderIdx: number) => void,
+  onPageAddBlank: (orderIdx: number) => void,
   onPageMove: (orderIdx: number, dir: -1 | 1) => void,
   onPageDragStart: (orderIdx: number) => void,
   onPageDragOver: (orderIdx: number) => void,
@@ -158,6 +161,7 @@ const PreviewSheet = React.memo(({
       if (pageIndex >= pageThumbnails.length) break;
 
       const thumb = pageThumbnails[pageIndex];
+      if (!thumb) continue;
       const cell = layout.cells[i];
 
       const sx = thumb.width * params.crop.l;
@@ -269,7 +273,7 @@ const PreviewSheet = React.memo(({
 
               {/* 页角标：原 PDF 页码 */}
               <div className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-black/55 text-white pointer-events-none opacity-0 group-hover/cell:opacity-100 transition-opacity">
-                原第 {pageLabels[orderIdx] ?? orderIdx + 1} 页
+                {pageLabels[orderIdx] === null ? '空白页' : `原第 ${pageLabels[orderIdx] ?? orderIdx + 1} 页`}
               </div>
 
               {/* 悬浮操作栏：针对这一页原 PDF */}
@@ -295,7 +299,16 @@ const PreviewSheet = React.memo(({
                 <div className="w-px h-3.5 bg-white/25 mx-0.5" />
                 <button
                   type="button"
-                  title={`删除原第 ${pageLabels[orderIdx] ?? orderIdx + 1} 页`}
+                  title="在此页后添加空白页"
+                  aria-label="在此页后添加空白页"
+                  onClick={(e) => { e.stopPropagation(); onPageAddBlank(orderIdx); }}
+                  className="w-6 h-6 rounded-full text-emerald-200 hover:bg-emerald-500/30 flex items-center justify-center"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                </button>
+                <button
+                  type="button"
+                  title={pageLabels[orderIdx] === null ? '删除空白页' : `删除原第 ${pageLabels[orderIdx] ?? orderIdx + 1} 页`}
                   onClick={(e) => { e.stopPropagation(); onPageDelete(orderIdx); }}
                   className="w-6 h-6 rounded-full text-red-300 hover:bg-red-500/30 flex items-center justify-center"
                 >
@@ -329,12 +342,12 @@ export default function PdfImposition() {
   const dragCounter = useRef(0);
   
   // Params State
-  const [nup, setNup] = useState<number>(2);
+  const [nup, setNup] = useState<number>(4);
   const [orient, setOrient] = useState<Orientation>('portrait');
-  const [scalePct, setScalePct] = useState<number>(92);
+  const [scalePct, setScalePct] = useState<number>(100);
   const [crop, setCrop] = useState({ t: 0, b: 0, l: 0, r: 0 });
   const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [margin, setMargin] = useState<number>(5);
+  const [margin, setMargin] = useState<number>(0);
   const [border, setBorder] = useState<boolean>(false);
   const [borderColor, setBorderColor] = useState<string>('#000000');
   const [borderWidth, setBorderWidth] = useState<number>(1);
@@ -342,9 +355,7 @@ export default function PdfImposition() {
   const [pageRange, setPageRange] = useState<string>(''); // Empty means all
 
   // 页序：当前排版顺序下的原文件 0-based 页码（删除 = 从中移除；移动 = 重排）
-  const [pageOrder, setPageOrder] = useState<number[]>([]);
-  // 页面管理面板中当前勾选的页（待删除），存原文件 0-based 页码
-  const [selectedPages, setSelectedPages] = useState<Set<number>>(new Set());
+  const [pageOrder, setPageOrder] = useState<PageOrderEntry[]>([]);
   // 按范围删除：如 "1-5, 8"（原文件页码）
   const [deleteRange, setDeleteRange] = useState<string>('');
   // 预览页级拖拽（操作的是原 PDF 页，而非整张输出页）
@@ -458,8 +469,8 @@ export default function PdfImposition() {
     return pageOrder;
   }, [pageOrder, pageThumbnails]);
 
-  const activeThumbnails = useMemo(
-    () => activeIndices.map(i => pageThumbnails[i]),
+  const activeThumbnails = useMemo<(HTMLCanvasElement | null)[]>(
+    () => activeIndices.map(i => i === null ? null : pageThumbnails[i] ?? null),
     [activeIndices, pageThumbnails]
   );
 
@@ -468,7 +479,8 @@ export default function PdfImposition() {
     if (activeThumbnails.length === 0) return null;
 
     const params = getParams();
-    const firstPage = activeThumbnails[0];
+    const firstPage = activeThumbnails.find((page): page is HTMLCanvasElement => page !== null);
+    if (!firstPage) return null;
     const srcAspect = (firstPage.width * (1 - params.crop.l - params.crop.r)) /
                       (firstPage.height * (1 - params.crop.t - params.crop.b));
 
@@ -479,38 +491,18 @@ export default function PdfImposition() {
     return { layout, totalSheets, selectedSheetIndices, params };
   }, [activeThumbnails, getParams, pageRange]);
 
-  // 页面管理：勾选 / 删除 / 恢复
-  const toggleSelectPage = (idx: number) => {
-    setSelectedPages(prev => {
-      const next = new Set(prev);
-      if (next.has(idx)) next.delete(idx);
-      else next.add(idx);
-      return next;
-    });
-  };
-
   // 从页序中删除若干原文件页码（至少保留 1 页）
   const removePagesFromOrder = (targets: Set<number>) => {
     if (targets.size === 0) return;
     setPageOrder(prev => {
       const base = prev.length > 0 ? prev : pageThumbnails.map((_, i) => i);
-      const next = base.filter(i => !targets.has(i));
-      if (next.length === 0) {
+      const next = base.filter(i => i === null || !targets.has(i));
+      if (!next.some(i => i !== null)) {
         alert('至少需要保留 1 页');
         return base;
       }
       return next;
     });
-    setSelectedPages(new Set());
-  };
-
-  const deleteSelectedPages = () => {
-    if (selectedPages.size === 0) return;
-    if (selectedPages.size >= activeIndices.length) {
-      alert('至少需要保留 1 页');
-      return;
-    }
-    removePagesFromOrder(new Set(selectedPages));
   };
 
   // 按范围删除：如 "1-5, 8"（原文件页码）
@@ -521,7 +513,8 @@ export default function PdfImposition() {
       alert('请输入有效的页码范围，例如 1-5, 8');
       return;
     }
-    if (targets.size >= activeIndices.length) {
+    const remainingPages = activeIndices.filter(i => i !== null && !targets.has(i));
+    if (remainingPages.length === 0) {
       alert('至少需要保留 1 页');
       return;
     }
@@ -537,19 +530,14 @@ export default function PdfImposition() {
       // 插到第一个比它大的原页码之前，等价于回到原文件顺序位置
       let insertAt = base.length;
       for (let k = 0; k < base.length; k++) {
-        if (base[k] > idx) {
+        const pageIndex = base[k];
+        if (pageIndex !== null && pageIndex > idx) {
           insertAt = k;
           break;
         }
       }
       const next = [...base];
       next.splice(insertAt, 0, idx);
-      return next;
-    });
-    setSelectedPages(prev => {
-      if (!prev.has(idx)) return prev;
-      const next = new Set(prev);
-      next.delete(idx);
       return next;
     });
     setDeleteRange('');
@@ -564,7 +552,24 @@ export default function PdfImposition() {
       alert('至少需要保留 1 页');
       return;
     }
+    if (srcIdx === null) {
+      setPageOrder(prev => {
+        const next = [...(prev.length > 0 ? prev : pageThumbnails.map((_, i) => i))];
+        next.splice(orderIdx, 1);
+        return next;
+      });
+      return;
+    }
     removePagesFromOrder(new Set([srcIdx]));
+  };
+
+  // 在指定排版页之后插入空白页（null 不对应源 PDF 页面）
+  const addBlankPageAfter = (orderIdx: number) => {
+    setPageOrder(prev => {
+      const next: PageOrderEntry[] = [...(prev.length > 0 ? prev : pageThumbnails.map((_, i) => i))];
+      next.splice(orderIdx + 1, 0, null);
+      return next;
+    });
   };
 
   // 将某页在排版序中前移/后移一位（与相邻页换位）
@@ -641,7 +646,6 @@ export default function PdfImposition() {
     setProgress(0);
     setPageThumbnails([]);
     setPageOrder([]);
-    setSelectedPages(new Set());
     setDeleteRange('');
     setPageRange('');
     setGridScrollTop(0);
@@ -802,10 +806,17 @@ export default function PdfImposition() {
         const endIndex = Math.min(startIndex + params.nup, total);
         
         // 逻辑下标 → 原文件下标（跳过已删除页）
+        const batchEntries = keptSrcIndices.slice(startIndex, endIndex);
+        const sourceSlots: number[] = [];
         const batchIndices: number[] = [];
-        for(let i = startIndex; i < endIndex; i++) batchIndices.push(keptSrcIndices[i]);
-        
-        const srcPages = await outDoc.copyPages(srcDoc, batchIndices);
+        batchEntries.forEach((srcIndex, slot) => {
+          if (srcIndex !== null) {
+            sourceSlots.push(slot);
+            batchIndices.push(srcIndex);
+          }
+        });
+
+        const srcPages = batchIndices.length > 0 ? await outDoc.copyPages(srcDoc, batchIndices) : [];
 
         const embeddedPages = await Promise.all(srcPages.map(p => {
             const { width, height } = p.getSize();
@@ -817,8 +828,8 @@ export default function PdfImposition() {
         }));
 
         for (let i = 0; i < embeddedPages.length; i++) {
-            const ep = embeddedPages[i];
-            const cell = layout.cells[i];
+          const ep = embeddedPages[i];
+          const cell = layout.cells[sourceSlots[i]];
             
             const cellW = cell.cellW;
             const cellH = cell.cellH;
@@ -960,7 +971,7 @@ export default function PdfImposition() {
                         ) : (
                             <>
                                 <div className="text-[11px] text-[var(--text-sec)] leading-relaxed">
-                                    点击页码勾选要删除的页（可多选），或输入页码范围删除；点击已删除（划线红）的页码可单独恢复。
+                                    点击页码立即删除；也可输入页码范围删除。点击已删除（划线红）的页码可单独恢复。
                                 </div>
                                 <div className="flex gap-1.5">
                                     <div className="flex-1 h-8 rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] flex items-center px-2">
@@ -999,20 +1010,17 @@ export default function PdfImposition() {
                                                 {Array.from({ length: PAGE_GRID_COLS }, (_, c) => row * PAGE_GRID_COLS + c).map(i => {
                                                     if (i >= pageThumbnails.length) return <div key={i} className="h-7" />;
                                                     const isRemoved = removedPages.has(i);
-                                                    const isSel = selectedPages.has(i);
                                                     return (
                                                         <button
                                                             key={i}
                                                             type="button"
-                                                            onClick={() => isRemoved ? restorePage(i) : toggleSelectPage(i)}
-                                                            title={isRemoved ? `第 ${i + 1} 页（已删除，点击恢复）` : `第 ${i + 1} 页（点击勾选删除）`}
+                                                            onClick={() => isRemoved ? restorePage(i) : removePagesFromOrder(new Set([i]))}
+                                                            title={isRemoved ? `第 ${i + 1} 页（已删除，点击恢复）` : `第 ${i + 1} 页（点击立即删除）`}
                                                             className={[
                                                                 'h-7 rounded-md text-[11px] font-semibold border transition-all duration-150',
                                                                 isRemoved
                                                                     ? 'bg-red-500/10 border-red-400/40 text-red-500/60 line-through cursor-pointer hover:bg-red-500/20 hover:border-red-400/70'
-                                                                    : isSel
-                                                                        ? 'bg-red-500 border-red-500 text-white shadow-[0_0_0_2px_rgba(239,68,68,0.25)]'
-                                                                        : 'bg-[var(--input-bg)] border-[var(--input-border)] text-[var(--text)] hover:border-red-400/60'
+                                                                : 'bg-[var(--input-bg)] border-[var(--input-border)] text-[var(--text)] hover:border-red-400/60'
                                                             ].join(' ')}
                                                         >
                                                             {i + 1}
@@ -1022,16 +1030,6 @@ export default function PdfImposition() {
                                             </div>
                                         ))}
                                     </div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={deleteSelectedPages}
-                                        disabled={selectedPages.size === 0}
-                                        className="flex-1 h-8 rounded-lg text-xs font-semibold border border-red-400/50 text-red-500 bg-red-500/10 transition-all hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-500/10"
-                                    >
-                                        删除所选{selectedPages.size > 0 ? ` (${selectedPages.size})` : ''}
-                                    </button>
                                 </div>
                                 <div className="text-[11px] text-[var(--text-sec)]">
                                     共 {pageThumbnails.length} 页 · 保留 {activeIndices.length} 页{removedPages.size > 0 ? ` · 已删 ${removedPages.size} 页` : ''}
@@ -1321,10 +1319,11 @@ export default function PdfImposition() {
                                         params={layoutData.params}
                                         previewZoom={previewZoom}
                                         pageNo={pageNo}
-                                        pageLabels={activeIndices.map(i => i + 1)}
+                                        pageLabels={activeIndices.map(i => i === null ? null : i + 1)}
                                         dragFromOrder={dragFromOrder}
                                         dragOverOrder={dragOverOrder}
                                         onPageDelete={deletePageByOrder}
+                                        onPageAddBlank={addBlankPageAfter}
                                         onPageMove={movePageByOrder}
                                         onPageDragStart={(i) => setDragFromOrder(i)}
                                         onPageDragOver={(i) => setDragOverOrder(i)}
